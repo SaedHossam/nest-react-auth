@@ -7,15 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
-
-export interface ErrorResponseBody {
-  statusCode: number;
-  error: string;
-  message: string | string[];
-  path: string;
-  timestamp: string;
-  requestId?: string;
-}
+import { ErrorResponseDto } from '../dto/error-response.dto';
 
 /**
  * Turns every thrown error into one consistent JSON shape. Unexpected errors
@@ -40,7 +32,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       );
     }
 
-    const body: ErrorResponseBody = {
+    const body: ErrorResponseDto = {
       statusCode,
       error,
       message,
@@ -52,9 +44,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     res.status(statusCode).json(body);
   }
 
-  private describe(
-    exception: unknown,
-  ): Pick<ErrorResponseBody, 'statusCode' | 'error' | 'message'> {
+  private describe(exception: unknown): Pick<ErrorResponseDto, 'statusCode' | 'error' | 'message'> {
     if (exception instanceof HttpException) {
       const statusCode = exception.getStatus();
       const response = exception.getResponse();

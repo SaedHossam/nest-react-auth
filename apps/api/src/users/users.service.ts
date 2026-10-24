@@ -1,4 +1,4 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import { ConflictException, Injectable, OnModuleInit } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { isValidObjectId, Model, mongo } from 'mongoose';
 import { User, UserDocument } from './schemas/user.schema';
@@ -12,8 +12,17 @@ export interface CreateUserData {
 }
 
 @Injectable()
-export class UsersService {
+export class UsersService implements OnModuleInit {
   constructor(@InjectModel(User.name) private readonly userModel: Model<User>) {}
+
+  /**
+   * Mongoose builds indexes in the background, so on a fresh database the API
+   * could accept requests before the unique email index exists. Waiting here
+   * makes startup fail loudly instead of silently allowing duplicates.
+   */
+  async onModuleInit(): Promise<void> {
+    await this.userModel.init();
+  }
 
   /**
    * Relies on the unique index on `email` rather than a find-then-insert

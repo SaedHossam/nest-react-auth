@@ -1,6 +1,16 @@
 import { Body, Controller, HttpCode, HttpStatus, Post, Res } from '@nestjs/common';
+import {
+  ApiBadRequestResponse,
+  ApiConflictResponse,
+  ApiNoContentResponse,
+  ApiOperation,
+  ApiTags,
+  ApiTooManyRequestsResponse,
+  ApiUnauthorizedResponse,
+} from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import type { Response } from 'express';
+import { ErrorResponseDto } from '../common/dto/error-response.dto';
 import { AUTH_RATE_LIMIT } from './auth.constants';
 import { AuthCookieService } from './auth-cookie.service';
 import { AuthService } from './auth.service';
@@ -9,6 +19,8 @@ import { AuthResponseDto } from './dto/auth-response.dto';
 import { SignInDto } from './dto/sign-in.dto';
 import { SignUpDto } from './dto/sign-up.dto';
 
+@ApiTags('auth')
+@ApiTooManyRequestsResponse({ description: 'Rate limit exceeded.', type: ErrorResponseDto })
 @Public()
 @Controller('auth')
 export class AuthController {
@@ -19,6 +31,9 @@ export class AuthController {
 
   @Post('signup')
   @Throttle({ default: AUTH_RATE_LIMIT })
+  @ApiOperation({ summary: 'Create an account and start a session (sets the session cookie)' })
+  @ApiBadRequestResponse({ description: 'Validation failed.', type: ErrorResponseDto })
+  @ApiConflictResponse({ description: 'Email already registered.', type: ErrorResponseDto })
   async signUp(
     @Body() dto: SignUpDto,
     @Res({ passthrough: true }) res: Response,
@@ -31,6 +46,9 @@ export class AuthController {
   @Post('signin')
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: AUTH_RATE_LIMIT })
+  @ApiOperation({ summary: 'Sign in with email and password (sets the session cookie)' })
+  @ApiBadRequestResponse({ description: 'Validation failed.', type: ErrorResponseDto })
+  @ApiUnauthorizedResponse({ description: 'Invalid email or password.', type: ErrorResponseDto })
   async signIn(
     @Body() dto: SignInDto,
     @Res({ passthrough: true }) res: Response,
@@ -46,6 +64,8 @@ export class AuthController {
    */
   @Post('logout')
   @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'End the session (clears the session cookie)' })
+  @ApiNoContentResponse({ description: 'Session cookie cleared.' })
   logout(@Res({ passthrough: true }) res: Response): void {
     this.cookies.clearAccessToken(res);
   }

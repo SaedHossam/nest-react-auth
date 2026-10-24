@@ -1,5 +1,6 @@
-import { plainToInstance, Type } from 'class-transformer';
+import { plainToInstance, Transform, Type } from 'class-transformer';
 import {
+  IsBoolean,
   IsEnum,
   IsIn,
   IsInt,
@@ -63,6 +64,13 @@ export class EnvironmentVariables {
   /** Use `none` only when the web app and API live on different sites (requires HTTPS). */
   @IsIn(COOKIE_SAME_SITE)
   COOKIE_SAMESITE: CookieSameSite = 'lax';
+
+  /** Serve interactive API docs at /api/docs. */
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value === 'true' : value,
+  )
+  @IsBoolean()
+  SWAGGER_ENABLED = true;
 }
 
 export function validateEnv(config: Record<string, unknown>): EnvironmentVariables {
