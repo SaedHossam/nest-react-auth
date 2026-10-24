@@ -12,6 +12,8 @@ This project was built with Claude Code (Claude Opus 5.5) as a pair programmer. 
 | Swagger docs | Yes | Checked the generated spec and that the UI renders under Helmet's CSP |
 | Unit + e2e tests | Yes | Test cases chosen deliberately (enumeration, mass assignment, every password rule); two real bugs surfaced while making them pass |
 | README | Yes | Reviewed against the actual commands and env vars |
+| Web foundation (Vite, Tailwind, UI primitives, API client) | Yes | API client unit-tested; React Router v8 / zod 4 changelogs checked before use |
+| Sign up / sign in / app pages, route guards | Yes | Driven end to end in a real browser against the running API; two bugs found and fixed that way |
 
 ## Prompts and approaches that worked
 
@@ -25,6 +27,10 @@ This project was built with Claude Code (Claude Opus 5.5) as a pair programmer. 
 - **Password rules hid each other.** The first DTO stacked three `@Matches` decorators (letter, number, special). class-validator keys failures by constraint name, so they all collapsed into one `matches` entry and only one message came back. A user missing a number *and* a special character would fix one, resubmit, and only then learn about the other. Replaced with a small `@MatchesRule(name, regex, message)` decorator so each rule reports separately.
 - **Unique index could be missing.** An e2e test showed a duplicate sign up being accepted. The immediate cause was the test helper dropping the database (and with it the index) after startup. It also exposed a real gap: Mongoose builds indexes in the background, so a fresh production database could briefly accept duplicates. `UsersService` now awaits `Model.init()` on startup, and the helper clears documents instead of dropping the database.
 - **E2E tests could not reach MongoDB.** The first attempt failed with a cryptic server error, `Missing required sub-document 'driver' in the client metadata document`. Digging into the driver showed that MongoDB driver 7 loads its `os` adapter with a dynamic `import()`. Jest's CommonJS runtime cannot run that without `--experimental-vm-modules`, so the driver silently fell back to empty handshake metadata, which MongoDB 8 rejects. Fixed in the test script (`node --experimental-vm-modules …`) rather than patching app code; one shared in-memory MongoDB is started in Jest `globalSetup`.
+- **Logout left the user on the protected page.** The first `useLogout` called `queryClient.clear()` and then set the cached user to `null`. The server cookie was cleared, but the page didn't move: `clear()` removed the query that `RequireAuth` was observing, so the new `null` value went to a query nobody was subscribed to. Caught by clicking through in the browser, not by type checks. Fixed by setting the user to `null` in place and removing only the other queries.
+- **Two components racing to redirect.** The first draft navigated from the sign-in page on success *and* had `GuestOnly` redirect signed-in users to `/`, so the "return to the page you asked for" redirect could lose. Made the route guards the single place that redirects; pages only update the cached session.
+- **Unhelpful duplicate-email error.** The API's 409 message doesn't start with a field name, so the generic mapper showed it as a form-level alert. Sign up now attaches 409 to the email field and focuses it.
+- **Dependency choices that didn't install.** `@hookform/resolvers@6` ships conflicting optional peer dependencies (two incompatible `effect` ranges). Used v5, which supports zod 4.
 - **Vulnerable transitive dependency.** `@nestjs/platform-express` pins `multer@2.4.0` (GHSA-q7qp-rjg7-q26m), which `npm audit fix` cannot resolve. Added an npm `overrides` entry for `2.5.0`.
 
 ## Decisions made differently from the AI's first suggestion
