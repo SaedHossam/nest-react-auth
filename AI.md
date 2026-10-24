@@ -15,6 +15,7 @@ This project was built with Claude Code (Claude Opus 5.5) as a pair programmer. 
 | Web foundation (Vite, Tailwind, UI primitives, API client) | Yes | API client unit-tested; React Router v8 / zod 4 changelogs checked before use |
 | Sign up / sign in / app pages, route guards | Yes | Driven end to end in a real browser against the running API; two bugs found and fixed that way |
 | Web tests (schemas, redirects, error mapping, full flows against a fake API) | Yes | The logout regression test was verified to fail against the original buggy code before being kept |
+| Dockerfiles, nginx config, Compose, CI workflow, smoke test | Yes | Stack built and run locally; smoke test, headers, non-root users and cookie flags checked by hand and in a browser; workflow checked with actionlint |
 
 ## Prompts and approaches that worked
 
@@ -31,6 +32,9 @@ This project was built with Claude Code (Claude Opus 5.5) as a pair programmer. 
 - **Logout left the user on the protected page.** The first `useLogout` called `queryClient.clear()` and then set the cached user to `null`. The server cookie was cleared, but the page didn't move: `clear()` removed the query that `RequireAuth` was observing, so the new `null` value went to a query nobody was subscribed to. Caught by clicking through in the browser, not by type checks. Fixed by setting the user to `null` in place and removing only the other queries.
 - **Two components racing to redirect.** The first draft navigated from the sign-in page on success *and* had `GuestOnly` redirect signed-in users to `/`, so the "return to the page you asked for" redirect could lose. Made the route guards the single place that redirects; pages only update the cached session.
 - **Unhelpful duplicate-email error.** The API's 409 message doesn't start with a field name, so the generic mapper showed it as a form-level alert. Sign up now attaches 409 to the email field and focuses it.
+- **Lockfile generated on Windows broke `npm ci` on Linux.** The first Docker build failed: the API's `package-lock.json` was missing platform-specific optional packages (`@emnapi/*`) that npm on Linux expects. CI would have failed the same way. Regenerated the lockfile inside a Linux container and confirmed `npm ci` works on both Linux and Windows.
+- **Rate limiting behind a proxy.** Once the API sat behind nginx, every request would come from nginx's IP, so all users would share one rate-limit bucket. Added a `TRUST_PROXY` setting (one hop in Compose) so the API uses the forwarded client IP.
+- **Image install pulled a 700 MB test database.** `mongodb-memory-server` downloads a MongoDB binary on install. The API Dockerfile sets `MONGOMS_DISABLE_POSTINSTALL=1`, so the image build never fetches it.
 - **Dependency choices that didn't install.** `@hookform/resolvers@6` ships conflicting optional peer dependencies (two incompatible `effect` ranges). Used v5, which supports zod 4.
 - **Vulnerable transitive dependency.** `@nestjs/platform-express` pins `multer@2.4.0` (GHSA-q7qp-rjg7-q26m), which `npm audit fix` cannot resolve. Added an npm `overrides` entry for `2.5.0`.
 
@@ -38,5 +42,7 @@ This project was built with Claude Code (Claude Opus 5.5) as a pair programmer. 
 
 - **No Passport.** A ~40-line guard that verifies the JWT from the cookie (or a Bearer header) is easier to read and test than a Passport strategy plus guard for a single auth method.
 - **Single access token, no refresh tokens.** Refresh-token rotation is the more complete design, but it adds about an hour. Instead: short-lived token (1h) in an httpOnly cookie, with refresh tokens listed in the README as the next step.
+- **The API is only reachable through nginx in Compose.** It isn't published on a host port. The browser sees a single origin, so the cookie stays `SameSite=Lax` with no CORS involved.
+- **A smoke-test script instead of only CI-specific steps.** The same `scripts/smoke-test.sh` runs locally and in the Docker CI job, so "works in CI" and "works on my machine" are the same check.
 - **Swagger via the CLI plugin**, not hand-written `@ApiProperty` on every field. The plugin reads the class-validator rules and JSDoc comments, so the docs can't drift from the validation.
 - **Duplicate email returns 409.** This technically lets someone check whether an email is registered. Accepted for usability, since sign up is rate-limited. Sign in, by contrast, returns the same message and takes the same time for unknown emails and wrong passwords.

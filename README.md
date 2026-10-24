@@ -1,5 +1,7 @@
 # nest-react-auth
 
+[![CI](https://github.com/SaedHossam/nest-react-auth/actions/workflows/ci.yml/badge.svg)](https://github.com/SaedHossam/nest-react-auth/actions/workflows/ci.yml)
+
 Full-stack authentication module: sign up, sign in and a protected application page.
 
 | Part | Stack | Path |
@@ -9,10 +11,21 @@ Full-stack authentication module: sign up, sign in and a protected application p
 
 ## Prerequisites
 
-- Node.js 20+ (developed on 24) and npm
-- Docker (for MongoDB), or any MongoDB 6+ you can point `MONGODB_URI` at
+- Docker, for the one-command setup (or for MongoDB in local development)
+- For local development: Node.js 22.22+ (developed on 24) and npm
 
-## Quick start
+## Run everything with Docker
+
+```bash
+cp .env.example .env    # then set JWT_SECRET, e.g. openssl rand -base64 48
+docker compose up --build
+```
+
+Open http://localhost:8080. This runs MongoDB, the API (production build, non-root) and the web app served by nginx, which also proxies `/api` so everything is one origin. API docs are at http://localhost:8080/api/docs. Verify the running stack end to end with `./scripts/smoke-test.sh`.
+
+> The session cookie is `Secure` in production mode. Browsers allow that on `http://localhost`; anywhere else, serve the stack over HTTPS.
+
+## Local development
 
 ```bash
 # 1. Start MongoDB
@@ -105,6 +118,7 @@ Set in `apps/api/.env` (see [`.env.example`](apps/api/.env.example)). The API va
 | `PORT` | `3000` | |
 | `NODE_ENV` | `development` | `production` enables `Secure` cookies and JSON logs |
 | `LOG_LEVEL` | `info` | `fatal` … `trace` |
+| `TRUST_PROXY` | unset | Behind a reverse proxy, e.g. `1` (one hop) so rate limiting and logs see real client IPs. Set to `1` in Docker Compose |
 
 ## Security notes
 
@@ -120,7 +134,6 @@ Set in `apps/api/.env` (see [`.env.example`](apps/api/.env.example)). The API va
 
 - Logout clears the cookie, but tokens are stateless: a copied token stays valid until it expires. Next step: short access tokens plus rotating refresh tokens stored server-side, or a token denylist.
 - Rate limits are kept in memory per instance; use a shared store (e.g. Redis) when running several replicas.
-- Behind a reverse proxy, enable Express `trust proxy` so rate limiting sees real client IPs.
 
 ## Development
 
@@ -174,6 +187,16 @@ apps/web/src
 ├── test/            # test setup, fake API, render helper
 └── router.tsx       # route tree
 ```
+
+## CI
+
+[GitHub Actions](.github/workflows/ci.yml) runs on every pull request and on pushes to `main`:
+
+| Job | Steps |
+|---|---|
+| API | lint, typecheck, unit tests, e2e tests (in-memory MongoDB, binary cached), build |
+| Web | lint, format check, typecheck, tests, build |
+| Docker | after both pass: build images, start the full stack with Compose, run `scripts/smoke-test.sh` through nginx |
 
 ## AI usage
 

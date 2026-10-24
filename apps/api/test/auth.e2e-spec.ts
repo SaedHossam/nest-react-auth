@@ -1,6 +1,5 @@
-import type { INestApplication } from '@nestjs/common';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import request from 'supertest';
-import type { App } from 'supertest/types';
 import { createTestApp } from './utils/test-app';
 
 interface UserBody {
@@ -22,7 +21,7 @@ function sessionCookie(res: request.Response): string | undefined {
 }
 
 describe('Auth flow (e2e)', () => {
-  let app: INestApplication<App>;
+  let app: NestExpressApplication;
 
   beforeAll(async () => {
     app = await createTestApp();
@@ -156,7 +155,7 @@ describe('Auth flow (e2e)', () => {
 });
 
 describe('Auth rate limiting (e2e)', () => {
-  let app: INestApplication<App>;
+  let app: NestExpressApplication;
 
   beforeAll(async () => {
     app = await createTestApp();
