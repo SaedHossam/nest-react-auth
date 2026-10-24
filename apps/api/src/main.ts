@@ -4,6 +4,7 @@ import { Logger } from 'nestjs-pino';
 import { AppModule } from './app.module';
 import type { EnvironmentVariables } from './config/env.validation';
 import { setupApp } from './setup-app';
+import { setupSwagger } from './swagger';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
@@ -12,6 +13,10 @@ async function bootstrap() {
   setupApp(app);
 
   const config = app.get<ConfigService<EnvironmentVariables, true>>(ConfigService);
+  if (config.get('SWAGGER_ENABLED', { infer: true })) {
+    setupSwagger(app);
+  }
+
   const port = config.get('PORT', { infer: true });
   await app.listen(port);
 

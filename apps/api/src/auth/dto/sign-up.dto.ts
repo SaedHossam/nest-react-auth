@@ -14,11 +14,13 @@ import { MatchesRule } from './matches-rule.decorator';
 import { normalizeEmail, trimString } from './transforms';
 
 export class SignUpDto {
+  /** Stored lowercased and trimmed. @example "jane@example.com" */
   @Transform(normalizeEmail)
   @IsEmail({}, { message: 'Email must be a valid email address.' })
   @MaxLength(EMAIL_MAX_LENGTH)
   email!: string;
 
+  /** Trimmed, 3-50 characters. @example "Jane Doe" */
   @Transform(trimString)
   @IsString()
   @MinLength(NAME_MIN_LENGTH, {
@@ -29,6 +31,10 @@ export class SignUpDto {
   })
   name!: string;
 
+  /**
+   * 8-128 characters with at least one letter, one number and one special character.
+   * @example "Passw0rd!"
+   */
   @IsString()
   @MinLength(PASSWORD_MIN_LENGTH, {
     message: `Password must be at least ${PASSWORD_MIN_LENGTH} characters long.`,
