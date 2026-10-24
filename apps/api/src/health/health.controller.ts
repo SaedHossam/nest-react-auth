@@ -1,6 +1,10 @@
 import { Controller, Get } from '@nestjs/common';
+import { SkipThrottle } from '@nestjs/throttler';
 import { HealthCheck, HealthCheckService, MongooseHealthIndicator } from '@nestjs/terminus';
+import { Public } from '../auth/decorators/public.decorator';
 
+@Public()
+@SkipThrottle()
 @Controller('health')
 export class HealthController {
   constructor(

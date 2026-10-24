@@ -1,5 +1,15 @@
 import { plainToInstance, Type } from 'class-transformer';
-import { IsEnum, IsIn, IsInt, IsNotEmpty, IsString, Max, Min, validateSync } from 'class-validator';
+import {
+  IsEnum,
+  IsIn,
+  IsInt,
+  IsNotEmpty,
+  IsString,
+  Max,
+  Min,
+  MinLength,
+  validateSync,
+} from 'class-validator';
 
 export enum NodeEnv {
   Development = 'development',
@@ -9,6 +19,9 @@ export enum NodeEnv {
 
 const LOG_LEVELS = ['fatal', 'error', 'warn', 'info', 'debug', 'trace'] as const;
 export type LogLevel = (typeof LOG_LEVELS)[number];
+
+const COOKIE_SAME_SITE = ['lax', 'strict', 'none'] as const;
+export type CookieSameSite = (typeof COOKIE_SAME_SITE)[number];
 
 /**
  * Every environment variable the API reads. The app refuses to start if any
@@ -36,6 +49,20 @@ export class EnvironmentVariables {
 
   @IsIn(LOG_LEVELS)
   LOG_LEVEL: LogLevel = 'info';
+
+  /** HMAC secret for signing access tokens. Generate with `openssl rand -base64 48`. */
+  @IsString()
+  @MinLength(32)
+  JWT_SECRET!: string;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(60)
+  JWT_EXPIRES_IN_SECONDS = 3600;
+
+  /** Use `none` only when the web app and API live on different sites (requires HTTPS). */
+  @IsIn(COOKIE_SAME_SITE)
+  COOKIE_SAMESITE: CookieSameSite = 'lax';
 }
 
 export function validateEnv(config: Record<string, unknown>): EnvironmentVariables {
