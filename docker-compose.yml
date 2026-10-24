@@ -1,3 +1,6 @@
+# Development: `docker compose up -d mongo` (run the API and web app with npm).
+# Full stack:  `docker compose up --build`  ->  http://localhost:8080
+#              (requires JWT_SECRET in a root .env file, see .env.example)
 services:
   mongo:
     image: mongo:7
@@ -11,6 +14,36 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  api:
+    build: ./apps/api
+    restart: unless-stopped
+    depends_on:
+      mongo:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      MONGODB_URI: mongodb://mongo:27017/nest-react-auth
+      # Left empty when unset, so the API refuses to start with a clear error.
+      JWT_SECRET: ${JWT_SECRET:-}
+      JWT_EXPIRES_IN_SECONDS: ${JWT_EXPIRES_IN_SECONDS:-3600}
+      CORS_ORIGIN: ${WEB_ORIGIN:-http://localhost:8080}
+      SWAGGER_ENABLED: ${SWAGGER_ENABLED:-true}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      # Behind nginx: take client IPs from X-Forwarded-For (one hop).
+      TRUST_PROXY: "1"
+    # Not published: only reachable through the web container's /api proxy.
+    expose:
+      - "3000"
+
+  web:
+    build: ./apps/web
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "${WEB_PORT:-8080}:8080"
 
 volumes:
   mongo-data:

@@ -5,6 +5,7 @@ import {
   IsIn,
   IsInt,
   IsNotEmpty,
+  IsOptional,
   IsString,
   Max,
   Min,
@@ -71,6 +72,15 @@ export class EnvironmentVariables {
   )
   @IsBoolean()
   SWAGGER_ENABLED = true;
+
+  /**
+   * Express `trust proxy` setting, needed behind a reverse proxy so client IPs
+   * (used by rate limiting and logs) come from X-Forwarded-For. A hop count
+   * like `1`, or a list such as `loopback, uniquelocal`. Unset = trust nothing.
+   */
+  @IsOptional()
+  @IsString()
+  TRUST_PROXY?: string;
 }
 
 export function validateEnv(config: Record<string, unknown>): EnvironmentVariables {

@@ -1,8 +1,7 @@
-import type { INestApplication } from '@nestjs/common';
 import { getConnectionToken } from '@nestjs/mongoose';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
 import type { Connection } from 'mongoose';
-import type { App } from 'supertest/types';
 import { AppModule } from '../../src/app.module';
 import { setupApp } from '../../src/setup-app';
 
@@ -10,9 +9,9 @@ import { setupApp } from '../../src/setup-app';
  * Boots the real AppModule (against the in-memory MongoDB from global-setup)
  * with the same HTTP setup as production, starting with no documents.
  */
-export async function createTestApp(): Promise<INestApplication<App>> {
+export async function createTestApp(): Promise<NestExpressApplication> {
   const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
-  const app = moduleRef.createNestApplication<INestApplication<App>>();
+  const app = moduleRef.createNestApplication<NestExpressApplication>();
   setupApp(app);
   await app.init();
 
