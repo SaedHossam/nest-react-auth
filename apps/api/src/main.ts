@@ -1,0 +1,21 @@
+import { ConfigService } from '@nestjs/config';
+import { NestFactory } from '@nestjs/core';
+import { Logger } from 'nestjs-pino';
+import { AppModule } from './app.module';
+import type { EnvironmentVariables } from './config/env.validation';
+import { setupApp } from './setup-app';
+
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  app.useLogger(app.get(Logger));
+
+  setupApp(app);
+
+  const config = app.get<ConfigService<EnvironmentVariables, true>>(ConfigService);
+  const port = config.get('PORT', { infer: true });
+  await app.listen(port);
+
+  app.get(Logger).log(`API listening on http://localhost:${port}`, 'Bootstrap');
+}
+
+void bootstrap();
