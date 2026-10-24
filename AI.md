@@ -14,6 +14,7 @@ This project was built with Claude Code (Claude Opus 5.5) as a pair programmer. 
 | README | Yes | Reviewed against the actual commands and env vars |
 | Web foundation (Vite, Tailwind, UI primitives, API client) | Yes | API client unit-tested; React Router v8 / zod 4 changelogs checked before use |
 | Sign up / sign in / app pages, route guards | Yes | Driven end to end in a real browser against the running API; two bugs found and fixed that way |
+| Web tests (schemas, redirects, error mapping, full flows against a fake API) | Yes | The logout regression test was verified to fail against the original buggy code before being kept |
 
 ## Prompts and approaches that worked
 
