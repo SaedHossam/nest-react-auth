@@ -23,10 +23,29 @@ cd apps/api
 cp .env.example .env        # then set JWT_SECRET to a long random value
 npm ci
 npm run start:dev
+
+# 3. In a second terminal, run the web app (http://localhost:5173)
+cd apps/web
+npm ci
+npm run dev
 ```
 
+- Web app: http://localhost:5173 (the Vite dev server proxies `/api` to the API, so the session cookie is same-origin)
 - API docs (Swagger UI): http://localhost:3000/api/docs
 - Health check: http://localhost:3000/api/health
+
+## Web app
+
+| Route | Access | What it shows |
+|---|---|---|
+| `/signup` | Signed-out only | Email, name and password form with a live password checklist |
+| `/signin` | Signed-out only | Email and password form |
+| `/` | **Signed-in only** | "Welcome to the application." and a logout button |
+
+- **Validation:** zod schemas mirror the API rules for instant feedback; the API remains the source of truth, and its errors are shown under the matching field (e.g. a duplicate email) or as a form-level alert.
+- **Session:** the app never sees the token. It asks `GET /api/users/me` who is signed in (cached with TanStack Query); a 401 means signed out.
+- **Routing:** `RequireAuth` and `GuestOnly` guards are the only place that redirects. After signing in, users return to the page they originally requested (in-app paths only, no open redirects).
+- **Accessibility:** labelled inputs, errors linked with `aria-describedby` and announced, focus moves to the first invalid field, keyboard-friendly show/hide password.
 
 ## API
 
@@ -105,7 +124,20 @@ Set in `apps/api/.env` (see [`.env.example`](apps/api/.env.example)). The API va
 
 ## Development
 
-Run from `apps/api`:
+### Web (`apps/web`)
+
+| Command | Purpose |
+|---|---|
+| `npm run dev` | Dev server with hot reload |
+| `npm test` | Unit + integration tests (Vitest, Testing Library) |
+| `npm run lint` / `npm run typecheck` | Static checks (oxlint, `tsc`) |
+| `npm run build` && `npm run preview` | Production build |
+
+Integration tests render the real route tree against an in-memory fake API, covering sign up, sign in (including returning to the requested page), validation, duplicate email, guards and logout.
+
+Environment (optional, see [`apps/web/.env.example`](apps/web/.env.example)): `API_PROXY_TARGET` (dev proxy target, default `http://localhost:3000`) and `VITE_API_BASE_URL` (default same-origin `/api`).
+
+### API (`apps/api`)
 
 | Command | Purpose |
 |---|---|
@@ -129,6 +161,18 @@ apps/api/src
 ├── config/      # env validation, logger config
 ├── setup-app.ts # HTTP middleware shared by main.ts and e2e tests
 └── swagger.ts   # OpenAPI docs
+```
+
+### Project layout (web)
+
+```
+apps/web/src
+├── features/auth/   # pages, route guards, hooks, zod schemas, API calls
+├── components/ui/   # Button, TextField, PasswordField, Alert, Card, Spinner
+├── pages/           # application page, 404
+├── lib/             # fetch client, query client
+├── test/            # test setup, fake API, render helper
+└── router.tsx       # route tree
 ```
 
 ## AI usage
